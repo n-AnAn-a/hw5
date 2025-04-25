@@ -61,137 +61,63 @@ std::set<std::string> wordle(
 // Define any helper functions here
 */
 
-/*void recurse(
-    string& current,
-    const string& floating,
-    const set<string>& dict,
-    set<string>& results,
-    size_t pos,
-    int remaining_dashes
-) {
-    // Base case: full word generated
-    if (pos == current.size()) {
-        if (remaining_dashes == 0) {
-            int freq[26] = {0};
-            for (char c : current) ++freq[c - 'a'];
-            for (char c : floating) {
-                if (freq[c - 'a'] == 0) return;
-                --freq[c - 'a'];
-            }
-            if (dict.count(current)) results.insert(current);
-        }
-        return;
-    }
-
-    // If character already fixed, move to next
-    if (current[pos] != '-') {
-        recurse(current, floating, dict, results, pos + 1, remaining_dashes);
-        return;
-    }
-
-    bool floating_used[26] = {false};
-
-    // Try using floating characters first
-    for (size_t i = 0; i < floating.size(); ++i) {
-        char c = floating[i];
-        if (!floating_used[c - 'a']) {
-            floating_used[c - 'a'] = true;
-            string next_floating = floating;
-            next_floating.erase(next_floating.find(c), 1);
-            current[pos] = c;
-            recurse(current, next_floating, dict, results, pos + 1, remaining_dashes - 1);
-            current[pos] = '-';
-        }
-    }
-
-    // Try non-floating letters only if remaining dashes > floating letters
-    if ((int)floating.size() < remaining_dashes) {
-        for (char c = 'a'; c <= 'z'; ++c) {
-            if (floating.find(c) != string::npos) continue;
-            current[pos] = c;
-            recurse(current, floating, dict, results, pos + 1, remaining_dashes - 1);
-            current[pos] = '-';
-        }
-    }
-}
-
-set<string> wordle(const string& in, const string& floating, const set<string>& dict) {
-    set<string> results;
-    string current = in;
-    int dash_count = 0;
-    for (char c : in) {
-        if (c == '-') ++dash_count;
-    }
-    recurse(current, floating, dict, results, 0, dash_count);
-    return results;
-} */
-
 int count_dashes(const string& s, size_t start) {
     if (start == s.size()) return 0;
     return (s[start] == '-' ? 1 : 0) + count_dashes(s, start + 1);
 }
 
-void recurse(
-    string& current,
-    string& floating,
-    const set<string>& dict,
-    set<string>& results,
-    size_t pos,
-    int remaining_dashes
-) {
-    if (pos == current.size()) {
-        // All positions filled and all floating letters used
-        if (remaining_dashes == 0 && floating.empty() && dict.count(current)) {
-            results.insert(current);
-        }
-        return;
+void recurse(string& current, string& floating, const set<string>& dict, set<string>& results, size_t pos, int remaining_dashes) {
+  if (pos == current.size()) {
+    // All positions filled and all floating letters used
+    if (remaining_dashes == 0 && floating.empty() && dict.count(current)) {
+      results.insert(current);
     }
+    return;
+  }
 
-    if (current[pos] != '-') {
-        recurse(current, floating, dict, results, pos + 1, remaining_dashes);
-        return;
+  if (current[pos] != '-') {
+    recurse(current, floating, dict, results, pos + 1, remaining_dashes);
+    return;
+  }
+
+  // Try placing each floating letter
+  char tried[26] = {0};
+  for (size_t i = 0; i < floating.size(); ++i) {
+    char c = floating[i];
+    if (tried[c - 'a']) continue;
+    tried[c - 'a'] = 1;
+
+    current[pos] = c;
+    // Remove floating[i] without copying entire string
+    char last = floating.back();
+    floating[i] = last;
+    floating.pop_back();
+
+    recurse(current, floating, dict, results, pos + 1, remaining_dashes - 1);
+
+    // Restore
+    floating.push_back(last);
+    floating[i] = c;
+    current[pos] = '-';
+  }
+
+  // Only try non-floating letters if there are more dashes than floating letters
+  if (floating.size() < static_cast<size_t>(remaining_dashes)) {
+    for (char c = 'a'; c <= 'z'; ++c) {
+      if (tried[c - 'a'] || floating.find(c) != string::npos) continue;
+      current[pos] = c;
+      recurse(current, floating, dict, results, pos + 1, remaining_dashes - 1);
+      current[pos] = '-';
     }
-
-    // Try placing each floating letter (use each only once per recursion path)
-    char tried[26] = {0};
-    for (size_t i = 0; i < floating.size(); ++i) {
-        char c = floating[i];
-        if (tried[c - 'a']) continue;
-        tried[c - 'a'] = 1;
-
-        current[pos] = c;
-        // Remove floating[i] without copying entire string
-        char last = floating.back();
-        floating[i] = last;
-        floating.pop_back();
-
-        recurse(current, floating, dict, results, pos + 1, remaining_dashes - 1);
-
-        // Restore
-        floating.push_back(last);
-        floating[i] = c;
-        current[pos] = '-';
-    }
-
-    // Only try non-floating letters if there are more dashes than floating letters
-    if (floating.size() < static_cast<size_t>(remaining_dashes)) {
-        for (char c = 'a'; c <= 'z'; ++c) {
-            if (tried[c - 'a'] || floating.find(c) != string::npos) continue;
-
-            current[pos] = c;
-            recurse(current, floating, dict, results, pos + 1, remaining_dashes - 1);
-            current[pos] = '-';
-        }
-    }
+  }
 }
 
 set<string> wordle(const string& in, const string& floating, const set<string>& dict) {
-    set<string> results;
-    string current = in;
-    string float_copy = floating;
-    int dash_count = 0;
-    for (char c : in) if (c == '-') ++dash_count;
-
-    recurse(current, float_copy, dict, results, 0, dash_count);
-    return results;
+  set<string> results;
+  string current = in;
+  string floatCopy = floating;
+  int numDash = 0;
+  for (char c : in) if (c == '-') ++numDash;
+  recurse(current, floatCopy, dict, results, 0, numDash);
+  return results;
 }
