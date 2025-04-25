@@ -41,6 +41,7 @@ void wordleHelper(string& current, size_t index, string remainingFloating, const
     // More blanks than floating letters -> try other letters
     if (remainingFloating.size() < in.size() - index) {
       for (char c = 'a'; c <= 'z'; ++c) {
+        if (remainingFloating.find(c) != string::npos) continue; //Already tried
         current[index] = c;
         wordleHelper(current, index + 1, remainingFloating, in, dict, results);
       }
